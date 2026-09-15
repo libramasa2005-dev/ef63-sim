@@ -219,6 +219,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const camera = new THREE.PerspectiveCamera(60, 1280 / 396, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ canvas: canvasElem, antialias: true });
     renderer.setSize(1280, 396);
+    // タブレットやモバイル端末でのライト発色・光量計算を正常化する設定
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+
+    
 
     const ambientLight = new THREE.AmbientLight(0x6688aa, 0.8);
     scene.add(ambientLight);
@@ -227,7 +233,7 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(100, 200, 100);
     scene.add(dirLight);
 
-    const headLight = new THREE.SpotLight(0xffffff, 0, 200, Math.PI / 4, 0.5, 1);
+    const headLight = new THREE.SpotLight(0xffffff, 0, 300, Math.PI / 4, 0.3, 0);
     scene.add(headLight);
     scene.add(headLight.target);
 
@@ -624,7 +630,7 @@ window.addEventListener('DOMContentLoaded', () => {
             btn.textContent = `ヘッドライト: ${labels[lightMode]}`;
             btn.classList.toggle('btn-active', lightMode > 0);
         }
-        headLight.intensity = lightMode === 1 ? 5 : (lightMode === 2 ? 15 : 0);
+        headLight.intensity = lightMode === 1 ? 1.5 : (lightMode === 2 ? 3.5 : 0);
     };
 
     window.toggleHoldBrake = function() {
