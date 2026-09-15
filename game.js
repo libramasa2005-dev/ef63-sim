@@ -445,7 +445,7 @@ window.addEventListener('DOMContentLoaded', () => {
         ballastGeo.computeVertexNormals();
 
         // 影の影響で黒く沈まないよう、明度の高いグレーのBasicMaterialに指定
-        const ballastMat = new THREE.MeshBasicMaterial({ color: 0x666666, side: THREE.DoubleSide });
+        const ballastMat = new THREE.MeshLambertMaterial({ color: 0x555555, side: THREE.DoubleSide });
         const ballastMesh = new THREE.Mesh(ballastGeo, ballastMat);
 
         scene.add(ballastMesh);
@@ -695,8 +695,8 @@ window.addEventListener('DOMContentLoaded', () => {
             lightIntensity = THREE.MathUtils.lerp(1.0, 0.4, t);
         } else {
             // 【夜間 19:00 - 5:00】濃いネイビー（夜空）
-            skyColor.setHex(0x0a1128);
-            lightIntensity = 0.2;
+            skyColor.setHex(0x020205);
+            lightIntensity = 0.02;
         }
 
         // シーンの背景色を更新
