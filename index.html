@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EF64 運転シミュレータ</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        body {
+            background-color: #050811;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* 画面サイズ固定・スケーリングコンテナ (1280x720) */
+        #game-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #111;
+            position: relative;
+            transform-origin: center center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 走行路線選択タブバー */
+        #track-tab-bar {
+            width: 1280px;
+            height: 36px;
+            background-color: #181a1d;
+            border-bottom: 2px solid #333;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            gap: 8px;
+            z-index: 10;
+        }
+        .tab-btn {
+            background: #2a2d32;
+            color: #aaa;
+            border: 1px solid #444;
+            border-bottom: none;
+            padding: 6px 16px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .tab-btn:hover {
+            background: #3a3d42;
+            color: #fff;
+        }
+        .tab-btn.active-tab {
+            background: #0066cc;
+            color: #ffffff;
+            border-color: #0088ff;
+            box-shadow: 0 0 8px rgba(0, 136, 255, 0.5);
+        }
+
+        /* 上部: Three.js 3D描画エリア */
+        #view-panel {
+            width: 1280px;
+            height: 396px;
+            background-color: #000;
+            position: relative;
+        }
+        #canvas-view {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* 下部: 運転台コンソールエリア */
+        #cab-panel {
+            width: 1280px;
+            height: 288px;
+            background: linear-gradient(180deg, #2a2d32 0%, #181a1d 100%);
+            border-top: 4px solid #444;
+            display: flex;
+            padding: 12px;
+            gap: 16px;
+        }
+
+        /* セクション分け */
+        .panel-section {
+            background: #22252a;
+            border: 2px solid #3a3d42;
+            border-radius: 6px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* 1. 計器類エリア */
+        .meters-section {
+            flex: 2;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .meter-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .meter-label {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+        .gauge {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #1a1a1a 60%, #333 100%);
+            border: 3px solid #555;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 0 8px #000;
+        }
+        .gauge-needle {
+            width: 2px;
+            height: 40px;
+            background-color: #ff3333;
+            position: absolute;
+            bottom: 50%;
+            transform-origin: bottom center;
+            transform: rotate(-120deg);
+            transition: transform 0.05s linear;
+        }
+        .gauge-center {
+            width: 10px;
+            height: 10px;
+            background-color: #888;
+            border-radius: 50%;
+            position: absolute;
+            z-index: 2;
+        }
+        .meter-value {
+            margin-top: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #00ffcc;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        /* 2. 表示灯エリア */
+        .indicators-section {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            align-content: center;
+        }
+        .indicator-lamp {
+            background-color: #222;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 8px 4px;
+            text-align: center;
+            font-size: 11px;
+            color: #555;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        /* 3. スイッチ類エリア */
+        .switches-section {
+            flex: 1.5;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .btn-switch {
+            background: linear-gradient(180deg, #444 0%, #222 100%);
+            color: #fff;
+            border: 1px solid #666;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        }
+        .btn-switch:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+        }
+        .btn-active {
+            background: linear-gradient(180deg, #008800 0%, #004400 100%) !important;
+            border-color: #00ff00 !important;
+            color: #00ff00 !important;
+        }
+        .btn-active-yellow {
+            background: linear-gradient(180deg, #cc9900 0%, #664400 100%) !important;
+            border-color: #ffcc00 !important;
+            color: #ffcc00 !important;
+        }
+
+        /* 4. マスコン ＆ ブレーキ操作エリア */
+        .controls-section {
+            flex: 2;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            align-items: center;
+            gap: 12px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            width: 45%;
+        }
+        .control-label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #ddd;
+        }
+        .control-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 12px;
+            border-radius: 6px;
+            background: #111;
+            outline: none;
+            border: 1px solid #444;
+        }
+        .control-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 24px;
+            border-radius: 3px;
+            background: #888;
+            cursor: pointer;
+            border: 1px solid #fff;
+        }
+        .control-val {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffaa00;
+            font-family: 'Courier New', Courier, monospace;
+        }
+    </style>
+    <!-- Three.js ライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- メインゲームロジック -->
+    <script src="game.js"></script>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- 走行路線選択タブバー -->
+        <div id="track-tab-bar">
+            <button id="tab-down-track" class="tab-btn active-tab" onclick="selectTrackTab('down')">下り線（坂を上がる）</button>
+            <button id="tab-up-track" class="tab-btn" onclick="selectTrackTab('up')">上り線（坂を下る）</button>
+        </div>
+
+        <!-- 上部 3Dビューポート -->
+        <div id="view-panel">
+            <canvas id="canvas-view"></canvas>
+        </div>
+
+        <!-- 下部 運転台コンソール -->
+        <div id="cab-panel">
+
+            <!-- 1. アナログ計器群 -->
+            <div class="panel-section meters-section">
+                <!-- 速度計 -->
+                <div class="meter-box">
+                    <div class="meter-label">速度 (km/h)</div>
+                    <div class="gauge">
+                        <div id="needle-speed" class="gauge-needle"></div>
+                        <div class="gauge-center"></div>
+                    </div>
+                    <div class="meter-value"><span id="val-speed">0.0</span></div>
+                </div>
+
+                <!-- 電流計 -->
+                <div class="meter-box">
+                    <div class="meter-label">主流 (A)</div>
+                    <div class="gauge">
+                        <div id="needle-current" class="gauge-needle"></div>
+                        <div class="gauge-center"></div>
+                    </div>
+                    <div class="meter-value"><span id="val-current">0</span></div>
+                </div>
+
+                <!-- ブレーキシリンダ圧力計 (BC) -->
+                <div class="meter-box">
+                    <div class="meter-label">BC圧 (kPa)</div>
+                    <div class="gauge">
+                        <div id="needle-bc" class="gauge-needle"></div>
+                        <div class="gauge-center"></div>
+                    </div>
+                    <div class="meter-value"><span id="val-bc">0</span></div>
+                </div>
+
+                <!-- 元空気溜圧力計 (MR) -->
+                <div class="meter-box">
+                    <div class="meter-label">MR圧 (kPa)</div>
+                    <div class="gauge">
+                        <div id="needle-mr" class="gauge-needle"></div>
+                        <div class="gauge-center"></div>
+                    </div>
+                    <div class="meter-value"><span id="val-mr">780</span></div>
+                </div>
+
+                <!-- 時計 -->
+                <div class="meter-box">
+                    <div class="meter-label">時刻</div>
+                    <div class="gauge">
+                        <div id="needle-clock-hour" class="gauge-needle" style="height: 25px; background-color: #fff;"></div>
+                        <div id="needle-clock-minute" class="gauge-needle" style="height: 35px; background-color: #fff;"></div>
+                        <div id="needle-clock-second" class="gauge-needle" style="height: 38px; background-color: #ff3333;"></div>
+                        <div class="gauge-center"></div>
+                    </div>
+                    <div class="meter-value"><span id="val-time">12:00</span></div>
+                </div>
+            </div>
+
+            <!-- 2. 表示灯 -->
+            <div class="panel-section indicators-section">
+                <div id="indicator-stepping" class="indicator-lamp">進段中</div>
+                <div id="indicator-blower" class="indicator-lamp">送風機起動</div>
+            </div>
+
+            <!-- 3. 各種スイッチ操作 -->
+            <div class="panel-section switches-section">
+                <button id="btn-reverser" class="btn-switch" onclick="cycleReverser()">逆転機: 中立 (N)</button>
+                <button id="btn-panta" class="btn-switch" onclick="togglePanta()">パンタグラフ: 降下</button>
+                <button id="btn-abb" class="btn-switch" onclick="toggleABB()">主開閉器 (ABB): 切</button>
+                <button id="btn-light" class="btn-switch" onclick="cycleLight()">ヘッドライト: OFF</button>
+                <button id="btn-hold-brake" class="btn-switch" onclick="toggleHoldBrake()" style="grid-column: span 2;">抑速ブレーキ: 切</button>
+            </div>
+
+            <!-- 4. マスコン ＆ ブレーキレバー -->
+            <div class="panel-section controls-section">
+                <!-- ノッチ操作 (W/S) -->
+                <div class="control-group">
+                    <div class="control-label">マスコン (W/S)</div>
+                    <input type="range" id="notch-slider" class="control-slider" min="0" max="8" value="0" step="1" oninput="updateNotch(this.value)">
+                    <div class="control-val"><span id="val-notch">0</span> 段</div>
+                </div>
+
+                <!-- ブレーキ操作 (A/D) -->
+                <div class="control-group">
+                    <div class="control-label">ブレーキ (A/D)</div>
+                    <input type="range" id="brake-slider" class="control-slider" min="0" max="8" value="0" step="1" oninput="updateBrake(this.value)">
+                    <div class="control-val"><span id="val-brake">0</span> 段</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>
