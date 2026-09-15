@@ -805,7 +805,7 @@ window.addEventListener('DOMContentLoaded', () => {
             bcPressure -= (bcPressure - targetBc) * dt * 3.0;
         }
 
-        if (brake > 0 || Math.abs(bcPressure - targetBc) > 1.0) {
+        if (Math.abs(bcPressure - targetBc) > 0.1) {
             playLoopSound('airBrake');
         } else {
             stopLoopSound('airBrake');
@@ -860,7 +860,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const brakeDirection = speed > 0 ? 1 : (speed < 0 ? -1 : 0);
         let brakeForce = totalBrakeMag * brakeDirection;
 
-        let accel = motorForce - brakeForce - (speed * 0.04) - gravityForce;
+        let accel = motorForce - brakeForce - (speed * 0.01) - gravityForce;
 
         speed += accel * dt;
         if (reverser === 0 && Math.abs(speed) < 0.1) speed = 0;
