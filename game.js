@@ -763,37 +763,52 @@ window.addEventListener('DOMContentLoaded', () => {
                 isStepping = false;
                 stepTimer = 0;
             }
-
-            const targetSpeed = notchSpeedLimits[currentStep];
-            const speedRatio = Math.min(absSpeed / (targetSpeed || 1), 1.0);
-            let baseCurrent = (currentStep * 90) * (1 - speedRatio * 0.6);
-
-            const effectiveGradient = gradient * reverser;
-            if (effectiveGradient > 0) {
-                baseCurrent += effectiveGradient * 8.5;
-            }
-
-            motorCurrent += (baseCurrent - motorCurrent) * dt * 4.0;
-            if (motorCurrent < 0) motorCurrent = 0;
-
-        } else if (holdBrakeOn && absSpeed > 20.0) {
-            currentStep = 0;
-            stepTimer = 0;
-            isStepping = false;
-
-            const excessSpeed = absSpeed - 20.0;
-
-            const baseGenCurrent = Math.max(Math.abs(gradient), 20.0) * (absSpeed / 8.0) * 15.0;
-            const targetCurrent = Math.min(baseGenCurrent, 600);
-            motorCurrent += (targetCurrent - motorCurrent) * dt * 4.0;
-
         } else {
             currentStep = 0;
             stepTimer = 0;
             isStepping = false;
-
-            motorCurrent += (0 - motorCurrent) * dt * 5.0;
         }
+
+        // 2. 力行（加速）電流の計算
+        let targetMotorCurrent = 0;
+        if (canElectrify && currentStep > 0) {
+            const targetSpeed = notchSpeedLimits[currentStep];
+
+            // 現在速度がノッチ目標速度より遅い場合は大電流、達すると0へ向かう
+            if (absSpeed < targetSpeed) {
+                // 速度ギャップ（遅れている割合 1.0 〜 0.0）
+                const speedGapRatio = (targetSpeed - absSpeed) / targetSpeed;
+                
+                // 基本電流：ステップに応じた最大値 × 速度差率
+                targetMotorCurrent = (currentStep * 90) * (0.3 + 0.7 * speedGapRatio);
+
+                // 登り坂による負荷加算
+                const effectiveGradient = gradient * reverser;
+                if (effectiveGradient > 0) {
+                    targetMotorCurrent += effectiveGradient * 8.5;
+                }
+            } else {
+                // 制限速度を超えている場合は力行電流を絞る
+                targetMotorCurrent = 0;
+            }
+        }
+
+        // 3. 抑速ブレーキ（回生）電流の計算と合算
+        let regenCurrent = 0;
+        if (holdBrakeOn && absSpeed > 20.0) {
+            // 速度と勾配に応じた発電（回生）電流
+            const baseGenCurrent = Math.max(Math.abs(gradient), 20.0) * (absSpeed / 8.0) * 15.0;
+            regenCurrent = Math.min(baseGenCurrent, 600);
+        }
+
+        // 力行電流と回生電流の「和」を目標電流とする
+        const totalTargetCurrent = targetMotorCurrent + regenCurrent;
+
+        // 4. 電流値の平滑化（メータ針の滑らかな追従）
+        motorCurrent += (totalTargetCurrent - motorCurrent) * dt * 4.0;
+        if (motorCurrent < 0) motorCurrent = 0;
+
+        
 
         // 空気圧・エアブレーキ音処理
         const targetBc = brake * 45;
