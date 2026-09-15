@@ -630,7 +630,7 @@ window.addEventListener('DOMContentLoaded', () => {
             btn.textContent = `ヘッドライト: ${labels[lightMode]}`;
             btn.classList.toggle('btn-active', lightMode > 0);
         }
-        headLight.intensity = lightMode === 1 ? 3.5 : (lightMode === 2 ? 0.75 : 0);
+        headLight.intensity = lightMode === 1 ? 0.275 : (lightMode === 2 ? 0.75 : 0);
     };
 
     window.toggleHoldBrake = function() {
