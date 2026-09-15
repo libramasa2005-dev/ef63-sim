@@ -630,7 +630,7 @@ window.addEventListener('DOMContentLoaded', () => {
             btn.textContent = `ヘッドライト: ${labels[lightMode]}`;
             btn.classList.toggle('btn-active', lightMode > 0);
         }
-        headLight.intensity = lightMode === 1 ? 1.5 : (lightMode === 2 ? 3.5 : 0);
+        headLight.intensity = lightMode === 1 ? 3.5 : (lightMode === 2 ? 0.75 : 0);
     };
 
     window.toggleHoldBrake = function() {
@@ -776,10 +776,12 @@ window.addEventListener('DOMContentLoaded', () => {
             motorCurrent += (baseCurrent - motorCurrent) * dt * 4.0;
             if (motorCurrent < 0) motorCurrent = 0;
 
-        } else if (holdBrakeOn && absSpeed > 2.0) {
+        } else if (holdBrakeOn && absSpeed > 20.0) {
             currentStep = 0;
             stepTimer = 0;
             isStepping = false;
+
+            const excessSpeed = absSpeed - 20.0;
 
             const baseGenCurrent = Math.max(Math.abs(gradient), 20.0) * (absSpeed / 8.0) * 15.0;
             const targetCurrent = Math.min(baseGenCurrent, 600);
@@ -848,7 +850,11 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         const gravityForce = (gradient / 1000) * 9.8; 
-        const holdBrakeForce = (holdBrakeOn && absSpeed > 0.1) ? 3.5 : 0;
+        let holdBrakeForce = 0;
+        if (holdBrakeOn && absSpeed > 20.0) {
+            const speedFactor = Math.min((absSpeed - 20.0) / 40.0, 1.0);
+            holdBrakeForce = 3.5 * speedFactor;
+        }
 
         const totalBrakeMag = (bcPressure / 45) * 2.5 + holdBrakeForce;
         const brakeDirection = speed > 0 ? 1 : (speed < 0 ? -1 : 0);
