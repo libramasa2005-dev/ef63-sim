@@ -698,9 +698,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // シーン内の環境光（DirectionalLightやAmbientLight）の明るさを調整
         scene.traverse((child) => {
-            if (child.isLight) {
-                child.intensity = lightIntensity;
-            }
+            if (child.isLight && !child.isSpotLight) {
+              child.intensity = lightIntensity;
+            } 
         });
     }
 
