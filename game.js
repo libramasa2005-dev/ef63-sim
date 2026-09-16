@@ -318,7 +318,7 @@ window.addEventListener('DOMContentLoaded', () => {
         currentPt = firstControlPt.clone();
 
         const numSegments = 4;
-        const baseSlopePerSegment = (selectedTrack === 'down' ? 1.5 : -1.5);
+        const baseSlopePerSegment = (selectedTrack === 'down' ? 1.5 : -5.5);
 
         for (let i = 0; i < numSegments; i++) {
             const turnAngle = (Math.random() - 0.5) * 0.25; 
